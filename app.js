@@ -1,8 +1,6 @@
 // ====== 설정: GAS 웹앱 URL ======
 const GAS_BASE_URL = "https://script.google.com/macros/s/AKfycbwc5Ke-k4Phf736PN8EhkdoTzlTX0ifB0h4HxTbI91TUCPHvnH-wAEaniohMWFbZ3xv/exec";
 
-const GAS_BASE_URL = "…/exec";
-
 let courseTopicMap = {};  // 이제 시트에서 받아온 값으로 채움
 
 
@@ -204,3 +202,4 @@ window.addEventListener('load', () => {
     switchScreen('menu-screen');
   });
 });
+
