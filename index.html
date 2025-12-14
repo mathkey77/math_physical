@@ -35,6 +35,12 @@
       <h1>수학 연산 트레이닝</h1>
       <p class="subtitle">과정과 토픽을 선택하고 짧게 집중 연습해 보세요.</p>
     </header>
+        <section class="section-card">
+      <div class="nes-field">
+        <label for="student-name">이름</label>
+        <input id="student-name" class="nes-input" type="text" placeholder="예: 홍길동" maxlength="12" />
+      </div>
+    </section>
 
     <section class="section-card">
       <div class="nes-field">
@@ -95,16 +101,25 @@
 
   <!-- 3. 결과 화면 -->
   <div id="result-screen" class="screen">
-    <div class="result-inner">
-      <h2>연습 완료</h2>
-      <p class="result-line">점수 <span id="final-score"></span></p>
-      <p class="result-line">소요 시간 <span id="final-time"></span></p>
-      <button class="nes-btn" id="back-home-btn">처음으로 돌아가기</button>
+    <div id="ranking-screen" class="screen">
+      <div class="result-inner">
+        <h2>랭킹</h2>
+    
+        <p class="result-line">
+          <span id="ranking-meta"></span>
+        </p>
+    
+        <div id="ranking-table-wrap" class="ranking-table-wrap"></div>
+    
+        <button class="nes-btn" id="back-result-btn" style="margin-top:16px;">결과로 돌아가기</button>
+        <button class="nes-btn" id="back-home-btn-2" style="margin-top:10px;">처음으로</button>
+      </div>
     </div>
-  </div>
+
 
 </div>
 
 <script src="app.js"></script>
 </body>
 </html>
+
