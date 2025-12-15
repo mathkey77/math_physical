@@ -1,5 +1,5 @@
 // ====== 설정: GAS 웹앱 URL (중복 선언 금지) ======
-const GAS_BASE_URL = "https://script.google.com/macros/s/AKfycbyN4Dup809_zEjc-0goosdJxj3rS1GaBOmho7QiO2UQAwzzqSw3Ypld2p0rZMwwMgagEA/exec";
+const GAS_BASE_URL = "https://script.google.com/macros/s/AKfycbzgDT_l7uUnXMwmN29pGz8uS34Qz4wvP5wbuDTwmFTP-ZaxhTMt78QoiHUZNVTaySvb8Q/exec";
 
 let courseTopicMap = {};
 
@@ -360,6 +360,7 @@ bindClick('save-score-btn', onClickSaveScore);
 bindClick('view-ranking-btn', openRankingScreen);
 
 });
+
 
 
 
