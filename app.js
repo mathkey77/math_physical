@@ -91,32 +91,19 @@ async function fetchRankings(topicKey, qCount) {
   return await fetchJson(url); // [{name,topic,qCount,score,time}, ...]
 }
 
-// ====== 타이머 ======
-function updateTimerDisplay(sec) {
-  const safeSec = Math.max(0, sec);
-  const m = Math.floor(safeSec / 60).toString().padStart(2, '0');
-  const s = (safeSec % 60).toString().padStart(2, '0');
-  document.getElementById('timer').innerText = `${m}:${s}`;
-
-  const ratio = gameState.timeLimit > 0 ? safeSec / gameState.timeLimit : 0;
-  document.getElementById('time-bar').style.width = (ratio * 100) + '%';
-  document.getElementById('timer').style.color = safeSec < 10 ? '#ef4444' : '#fbbf24';
-}
-
-function startTimer(limitSec) {
+function startTimer() {
   clearInterval(gameState.timerInterval);
   gameState.startTime = new Date();
-  gameState.timeLimit = limitSec;
 
-  let remaining = limitSec;
-  updateTimerDisplay(remaining);
+  // 더 이상 timeLimit/remaining을 쓰지 않음
+  gameState.timeLimit = 0;
 
   gameState.timerInterval = setInterval(() => {
-    remaining--;
-    updateTimerDisplay(remaining);
-    if (remaining <= 0) finishGame();
+    // 화면 표시를 지웠다면, 여기서 DOM 업데이트를 하지 않아도 됨
+    // (기록은 finishGame에서 startTime/endTime으로 계산)
   }, 1000);
 }
+
 
 // ====== 렌더링 ======
 function renderQuestion() {
@@ -307,7 +294,7 @@ async function startGame() {
     gameState.score = 0;
     gameState.totalQ = data.length;
 
-    startTimer(gameState.totalQ * 10);
+    startTimer();   // 인자 제거
     renderQuestion();
   } catch (e) {
     alert('문제를 불러오지 못했습니다: ' + e.message);
@@ -360,6 +347,7 @@ bindClick('save-score-btn', onClickSaveScore);
 bindClick('view-ranking-btn', openRankingScreen);
 
 });
+
 
 
 
