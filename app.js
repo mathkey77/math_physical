@@ -141,6 +141,7 @@ qData.choices.forEach(choice => {
       delimiters: [
         { left: "$$", right: "$$", display: true },
         { left: "\\(", right: "\\)", display: false }
+        { left: "$",  right: "$",  display: false }
       ]
     });
   } catch (e) {
@@ -376,6 +377,7 @@ bindClick('save-score-btn', onClickSaveScore);
 bindClick('view-ranking-btn', openRankingScreen);
 
 });
+
 
 
 
