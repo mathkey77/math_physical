@@ -413,5 +413,49 @@ button:disabled, .nes-btn:disabled{
 @media (max-width: 420px){
   .progress-overlay{ transform: translate(-50%, -45%); }
 }
+/* ===== 문제 텍스트 줄바꿈 안정화 ===== */
+.question-box{
+  justify-content: flex-start; /* center -> start */
+  text-align: left;
+}
+
+#question-text{
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  line-break: strict;
+}
+
+#question-text,
+#question-text *{
+  max-width: 100%;
+}
+
+#question-text .katex-display{
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+/* ===== 보기 버튼 텍스트 줄바꿈 안정화 ===== */
+.choice-btn{
+  white-space: normal;        /* 한 줄 고정 방지 */
+  word-break: keep-all;       /* 한글 단어 단위 줄바꿈 */
+  overflow-wrap: anywhere;    /* 공백 없어도 강제 줄바꿈 */
+  line-break: strict;
+
+  align-items: flex-start;    /* center -> start (2~3줄일 때 위쪽 정렬) */
+}
+
+.choice-btn,
+.choice-btn *{
+  max-width: 100%;
+}
+
+.choice-btn .katex-display{
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 
 
