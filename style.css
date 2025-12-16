@@ -436,15 +436,23 @@ button:disabled, .nes-btn:disabled{
 #question-text .katex-display{
   overflow-x: auto;
   overflow-y: hidden;
+  max-width: 100%;
 }
+
+/* (선택) KaTeX inline 쪽이 줄바꿈을 방해하면 사용 */
+#question-text .katex{
+  white-space: normal;
+}
+
 /* ===== 보기 버튼 텍스트 줄바꿈 안정화 ===== */
 .choice-btn{
-  white-space: normal;        /* 한 줄 고정 방지 */
-  word-break: keep-all;       /* 한글 단어 단위 줄바꿈 */
-  overflow-wrap: anywhere;    /* 공백 없어도 강제 줄바꿈 */
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   line-break: strict;
 
-  align-items: flex-start;    /* center -> start (2~3줄일 때 위쪽 정렬) */
+  /* 여러 줄일 때 위쪽 정렬(원치 않으면 center로 되돌려도 됨) */
+  align-items: flex-start;
 }
 
 .choice-btn,
@@ -455,6 +463,7 @@ button:disabled, .nes-btn:disabled{
 .choice-btn .katex-display{
   overflow-x: auto;
   overflow-y: hidden;
+  max-width: 100%;
 }
 
 
