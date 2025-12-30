@@ -97,8 +97,8 @@ async function onClickStartBtn() {
     const json = await res.json();
 
     if (json.ok && json.data) {
-      // json.data가 만약 객체라면 문자열로 변환, 문자열이라면 그대로 사용
-      const content = typeof json.data === 'string' ? json.data : JSON.stringify(json.data);
+      // 데이터가 객체로 넘어올 경우를 대비해 처리
+      const content = (typeof json.data === 'string') ? json.data : JSON.stringify(json.data);
       contentBox.innerHTML = content;
       if (window.renderMathInElement) {
         renderMathInElement(contentBox, {
@@ -114,7 +114,7 @@ async function onClickStartBtn() {
         </div>`;
     }
   } catch (e) {
-    if (contentBox) contentBox.innerHTML = '<p>개념을 불러오는 중 오류가 발생했습니다.</p>';
+    if (contentBox) contentBox.innerHTML = '<p>데이터 로드 오류</p>';
   }
 }
 
@@ -137,8 +137,10 @@ async function onStartQuizFromArticle() {
     const res = await fetch(url);
     const json = await res.json();
 
+    console.log("받아온 전체 데이터:", json); // 디버깅용
+
     if (!json.ok || !json.data || !Array.isArray(json.data) || json.data.length === 0) {
-      throw new Error("문제를 불러오지 못했습니다. 시트에 데이터가 있는지 확인하세요.");
+      throw new Error("문제를 불러오지 못했습니다. 시트 이름이나 데이터를 확인하세요.");
     }
 
     gameState.questions = json.data;
@@ -168,34 +170,47 @@ function startTimer() {
   }, 100);
 }
 
-// ====== [문제 렌더링] ======
+// ====== [문제 렌더링] 핵심 수정 부분 ======
 function renderQuestion() {
   const q = gameState.questions[gameState.currentIdx];
   const qTextEl = document.getElementById('question-text');
   const choicesEl = document.getElementById('choices-container');
 
-  if (!q || !qTextEl || !choicesEl) return;
+  if (!qTextEl || !choicesEl) return;
 
-  // [중요] q가 객체인 경우 q.question 속성에 접근해야 함
-  // 만약 q 자체가 [object Object]로 나온다면 q.question이 정의되지 않았을 가능성 확인
-  const questionStr = q.question || "질문을 불러올 수 없습니다.";
+  // 1. q가 유효한지 확인
+  if (!q) {
+    qTextEl.innerText = "문제를 찾을 수 없습니다.";
+    return;
+  }
+
+  console.log(`현재 문제(${gameState.currentIdx}):`, q); // 디버깅용
+
+  // 2. 질문 출력 (q가 객체라면 q.question 속성을 사용)
+  // [object Object]가 나오는 이유는 객체 자체를 출력하려 했기 때문
+  const qString = (typeof q === 'object' && q.question) ? q.question : String(q);
   
-  qTextEl.innerHTML = ''; 
-  qTextEl.innerText = questionStr; 
+  qTextEl.innerHTML = ''; // 초기화
+  qTextEl.innerText = qString; 
   choicesEl.innerHTML = '';
 
-  // 보기 버튼 생성 (배열인지 확인)
-  if (Array.isArray(q.choices)) {
-    q.choices.forEach(choice => {
+  // 3. 보기 출력 (q.choices 배열 확인)
+  const choices = Array.isArray(q.choices) ? q.choices : [];
+  
+  if (choices.length === 0) {
+    choicesEl.innerHTML = "<p style='color:red;'>보기가 없습니다. 시트 형식을 확인하세요.</p>";
+  } else {
+    choices.forEach(choice => {
       const btn = document.createElement('button');
       btn.className = 'choice-btn';
-      btn.innerText = choice;
+      // 보기가 객체일 경우를 대비해 String으로 변환
+      btn.innerText = (typeof choice === 'object') ? JSON.stringify(choice) : String(choice);
       btn.onclick = () => handleChoiceClick(choice, q.answer);
       choicesEl.appendChild(btn);
     });
   }
 
-  // KaTeX 수식 렌더링
+  // 4. 수식 렌더링
   if (window.renderMathInElement) {
     renderMathInElement(qTextEl, {
       delimiters: [{left: '$', right: '$', display: false}],
@@ -210,7 +225,11 @@ function renderQuestion() {
 
 // ====== [정답 처리] ======
 function handleChoiceClick(selected, correct) {
-  if (String(selected).trim() === String(correct).trim()) {
+  // 비교 시 공백 제거 및 문자열 강제 변환
+  const s = String(selected).trim();
+  const c = String(correct).trim();
+  
+  if (s === c) {
     gameState.score++;
   }
 
@@ -244,16 +263,13 @@ async function onClickSaveScore() {
   if (!name) { alert('이름을 입력하세요!'); return; }
 
   const timeEl = document.getElementById('final-time');
-  if (!timeEl) return;
-  const timeSec = timeEl.innerText.replace('초', '').trim();
+  const timeSec = timeEl ? timeEl.innerText.replace('초', '').trim() : "0";
 
   try {
     const url = `${GAS_BASE_URL}?action=saveScore&name=${encodeURIComponent(name)}&topic=${encodeURIComponent(currentSheetName)}&totalQ=${gameState.totalQ}&score=${gameState.score}&timeSec=${timeSec}`;
     const res = await fetch(url);
     const json = await res.json();
-    if (json.ok) {
-      alert('랭킹에 등록되었습니다!');
-    }
+    if (json.ok) alert('랭킹에 등록되었습니다!');
   } catch (e) {
     alert('저장 실패: ' + e.message);
   }
@@ -265,11 +281,11 @@ window.addEventListener('load', async () => {
 
   const startBtn = document.getElementById('start-btn');
   const quizStartBtn = document.getElementById('go-to-quiz-btn');
-  const saveScoreBtn = document.getElementById('save-score-btn');
-  const backHomeBtn = document.getElementById('back-home-btn');
+  const saveBtn = document.getElementById('save-score-btn');
+  const homeBtn = document.getElementById('back-home-btn');
 
   if (startBtn) startBtn.onclick = onClickStartBtn;
   if (quizStartBtn) quizStartBtn.onclick = onStartQuizFromArticle;
-  if (saveScoreBtn) saveScoreBtn.onclick = onClickSaveScore;
-  if (backHomeBtn) backHomeBtn.onclick = () => switchScreen('menu-screen');
+  if (saveBtn) saveBtn.onclick = onClickSaveScore;
+  if (homeBtn) homeBtn.onclick = () => switchScreen('menu-screen');
 });
