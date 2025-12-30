@@ -97,7 +97,9 @@ async function onClickStartBtn() {
     const json = await res.json();
 
     if (json.ok && json.data) {
-      contentBox.innerHTML = json.data;
+      // json.data가 만약 객체라면 문자열로 변환, 문자열이라면 그대로 사용
+      const content = typeof json.data === 'string' ? json.data : JSON.stringify(json.data);
+      contentBox.innerHTML = content;
       if (window.renderMathInElement) {
         renderMathInElement(contentBox, {
           delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}],
@@ -135,8 +137,8 @@ async function onStartQuizFromArticle() {
     const res = await fetch(url);
     const json = await res.json();
 
-    if (!json.ok || !json.data || json.data.length === 0) {
-      throw new Error("해당 단원에 문제가 없거나 불러오지 못했습니다.");
+    if (!json.ok || !json.data || !Array.isArray(json.data) || json.data.length === 0) {
+      throw new Error("문제를 불러오지 못했습니다. 시트에 데이터가 있는지 확인하세요.");
     }
 
     gameState.questions = json.data;
@@ -174,21 +176,26 @@ function renderQuestion() {
 
   if (!q || !qTextEl || !choicesEl) return;
 
-  // 1. 기존 내용 비우기
+  // [중요] q가 객체인 경우 q.question 속성에 접근해야 함
+  // 만약 q 자체가 [object Object]로 나온다면 q.question이 정의되지 않았을 가능성 확인
+  const questionStr = q.question || "질문을 불러올 수 없습니다.";
+  
   qTextEl.innerHTML = ''; 
-  qTextEl.innerText = q.question; // 텍스트 먼저 삽입
+  qTextEl.innerText = questionStr; 
   choicesEl.innerHTML = '';
 
-  // 2. 보기 버튼 생성
-  q.choices.forEach(choice => {
-    const btn = document.createElement('button');
-    btn.className = 'choice-btn';
-    btn.innerText = choice;
-    btn.onclick = () => handleChoiceClick(choice, q.answer);
-    choicesEl.appendChild(btn);
-  });
+  // 보기 버튼 생성 (배열인지 확인)
+  if (Array.isArray(q.choices)) {
+    q.choices.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerText = choice;
+      btn.onclick = () => handleChoiceClick(choice, q.answer);
+      choicesEl.appendChild(btn);
+    });
+  }
 
-  // 3. KaTeX 수식 렌더링 (텍스트 삽입 후 실행)
+  // KaTeX 수식 렌더링
   if (window.renderMathInElement) {
     renderMathInElement(qTextEl, {
       delimiters: [{left: '$', right: '$', display: false}],
@@ -203,7 +210,6 @@ function renderQuestion() {
 
 // ====== [정답 처리] ======
 function handleChoiceClick(selected, correct) {
-  // 정답 비교 (문자열/숫자 혼용 대비)
   if (String(selected).trim() === String(correct).trim()) {
     gameState.score++;
   }
