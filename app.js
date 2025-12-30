@@ -1,9 +1,9 @@
 // ====== 설정: GAS 웹앱 URL (중복 선언 금지) ======
-const GAS_BASE_URL = "https://script.google.com/macros/s/AKfycbzgDT_l7uUnXMwmN29pGz8uS34Qz4wvP5wbuDTwmFTP-ZaxhTMt78QoiHUZNVTaySvb8Q/exec";
+const GAS_BASE_URL = "https://script.google.com/macros/s/AKfycbw0Jry0N4CJbvJCEXmnD6wH_hOLxfv1wpMruNuT6jl3HYONPwzvM9nKogwLMt2G_ttviA/exec";
 
 let courseTopicMap = {};
 
-// 현재 선택 상태(랭킹 저장/조회에 필요)
+// 현재 선택 상태(랭킹 저장/조회 및 개념 조회에 필요)
 let currentCourse = "";
 let currentTopic = "";
 let currentSheetName = "";
@@ -21,310 +21,183 @@ let gameState = {
   timeLimit: 0
 };
 
+// ====== [추가] 정적 페이지 데이터 (AdSense 승인 필수 요소) ======
+const staticPages = {
+  about: {
+    title: "서비스 소개",
+    content: `
+      <h3>Math Physical이란?</h3>
+      <p>수학적 사고력과 연산 속도를 동시에 키우기 위한 '수학 피지컬' 측정 서비스입니다.</p>
+      <p>단순한 반복 풀이를 넘어, 정확한 개념 이해와 빠른 직관력을 기를 수 있도록 돕습니다.</p>
+    `
+  },
+  contact: {
+    title: "문의하기",
+    content: `
+      <h3>Contact Us</h3>
+      <p>서비스 이용 중 불편한 점이나 제안 사항이 있다면 아래로 연락주세요.</p>
+      <p><strong>Email:</strong> support@mathphysical.com</p>
+    `
+  },
+  privacy: {
+    title: "개인정보처리방침",
+    content: `
+      <h3>개인정보 처리 방침</h3>
+      <p>1. 본 서비스는 회원가입 없이 이용 가능하며, 랭킹 등록 시 입력하는 닉네임 외의 개인정보를 수집하지 않습니다.</p>
+      <p>2. 구글 애드센스 광고 게재를 위해 제3자 쿠키가 사용될 수 있습니다.</p>
+      <p>3. 수집된 기록은 서비스 품질 개선 및 통계 분석 목적으로만 활용됩니다.</p>
+    `
+  }
+};
+
 // ====== 유틸 ======
 function switchScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const target = document.getElementById(id);
+  if (target) target.classList.add('active');
+  window.scrollTo(0, 0);
 }
 
 function getStudentName() {
   const el = document.getElementById('student-name');
   return (el ? el.value : "").trim();
 }
+
 function bindClick(id, handler) {
   const el = document.getElementById(id);
   if (!el) {
     console.warn(`Skip bind (missing): #${id}`);
     return;
   }
-  el.addEventListener('click', handler);
+  el.onclick = handler;
 }
 
-// GAS가 {ok,data}로 오든, 그냥 맵/배열로 오든 안전 파싱
-async function fetchJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  if (json && typeof json === 'object' && 'ok' in json) {
-    if (!json.ok) throw new Error(json.error || 'GAS error');
-    return json.data;
+// ====== [추가] 정보 화면 열기 함수 (Footer용) ======
+function openInfo(pageKey) {
+  const data = staticPages[pageKey];
+  if (!data) return;
+  
+  const titleEl = document.getElementById('info-title');
+  const contentEl = document.getElementById('info-content');
+  
+  if (titleEl && contentEl) {
+    titleEl.innerText = data.title;
+    contentEl.innerHTML = data.content;
+    switchScreen('info-screen');
   }
-  // 구형 포맷(out.data)도 흡수
-  if (json && typeof json === 'object' && 'data' in json && Object.keys(json).length <= 5) return json.data;
+}
+
+// ====== [추가] API 호출: 개념 설명 가져오기 ======
+async function fetchDescription(topicKey) {
+  const url = `${GAS_BASE_URL}?action=getDescription&topic=${encodeURIComponent(topicKey)}`;
+  const res = await fetch(url);
+  const json = await res.json();
   return json;
 }
 
-// ====== GAS API ======
-async function apiTest() {
-  const url = `${GAS_BASE_URL}?action=test`;
-  return await fetchJson(url);
-}
-
-async function fetchCoursesAndTopics() {
-  const url = `${GAS_BASE_URL}?action=getCoursesAndTopics`;
-  return await fetchJson(url); // { "초등": ["분수의 덧셈", ...], ... }
-}
-
-async function fetchGameData(sheetName, count) {
-  const url = `${GAS_BASE_URL}?action=getGameData&sheetName=${encodeURIComponent(sheetName)}&count=${count}`;
-  return await fetchJson(url); // [ {q, choices:[{text,isCorrect}...]} ... ]
-}
-
-async function saveScoreToRanking(name, topicKey, totalQ, score, timeSec) {
-  const url =
-    `${GAS_BASE_URL}?action=saveScore` +
-    `&name=${encodeURIComponent(name)}` +
-    `&topic=${encodeURIComponent(topicKey)}` +
-    `&totalQ=${encodeURIComponent(totalQ)}` +
-    `&score=${encodeURIComponent(score)}` +
-    `&timeSec=${encodeURIComponent(timeSec)}`;
-
-  // 저장은 결과값 자체보다 성공/실패만 중요
-  await fetchJson(url);
-}
-
-async function fetchRankings(topicKey, qCount) {
-  const url =
-    `${GAS_BASE_URL}?action=getRankings` +
-    `&topic=${encodeURIComponent(topicKey)}` +
-    `&qCount=${encodeURIComponent(qCount)}`;
-  return await fetchJson(url); // [{name,topic,qCount,score,time}, ...]
-}
-function formatMMSS(sec){
-  const s = Math.max(0, Math.floor(sec));
-  const m = Math.floor(s / 60).toString().padStart(2,'0');
-  const r = (s % 60).toString().padStart(2,'0');
-  return `${m}:${r}`;
-}
-
-function startTimer() {
-  clearInterval(gameState.timerInterval);
-  gameState.startTime = new Date();
-
-  const sw = document.getElementById('stopwatch');
-  if (sw) sw.innerText = "00:00";
-
-  gameState.timerInterval = setInterval(() => {
-    const elapsedSec = (Date.now() - gameState.startTime.getTime()) / 1000;
-    if (sw) sw.innerText = formatMMSS(elapsedSec);
-  }, 250);
-}
-
-
-
-// ====== 렌더링 ======
-function renderQuestion() {
-  const qData = gameState.questions[gameState.currentIdx];
-  const bar = document.getElementById('time-bar');
-  if (bar && gameState.totalQ > 0) {
-    const ratio = (gameState.currentIdx + 1) / gameState.totalQ;
-    bar.style.width = (ratio * 100) + '%';
-  }
-
-  const qBox = document.getElementById('question-text');
-qBox.innerHTML = smartMathLayout(qData.q);  // 여기만 변경
-
-const cContainer = document.getElementById('choices-container');
-cContainer.innerHTML = '';
-qData.choices.forEach(choice => {
-  const btn = document.createElement('button');
-  btn.className = 'choice-btn';
-  btn.innerHTML = smartMathLayout(choice.text); // 보기에도 적용(권장)
-  btn.onclick = () => checkAnswer(choice.isCorrect);
-  cContainer.appendChild(btn);
-});
- 
-
-  // KaTeX 렌더
-  try {
-    renderMathInElement(document.body, {
-      delimiters: [
-        { left: "$$", right: "$$", display: true },
-        { left: "\\(", right: "\\)", display: false },
-        { left: "$",  right: "$",  display: false }
-      ]
-    });
-  } catch (e) {
-    console.error(e);
-  }
-}
-function smartMathLayout(text, inlineThreshold = 18) {
-  // $$...$$ 블록을 찾아서 내용 길이에 따라 inline으로 내릴지 결정
-  return String(text).replace(/\$\$([\s\S]+?)\$\$/g, (m, inner) => {
-    const content = inner.trim();
-
-    // 너무 길거나, 줄바꿈/정렬/분수 등 "블록이 어울리는" 패턴이면 블록 유지
-    const looksBlocky =
-      content.length > inlineThreshold ||
-      /\\frac|\\begin|\\sum|\\int|\\left|\\right|\\\\/.test(content) ||
-      /\n/.test(content);
-
-    if (looksBlocky) {
-      // 블록은 앞뒤로 줄바꿈을 강제로 넣어서 문장과 분리
-      return `\n$$${content}$$\n`;
-    }
-
-    // 짧은 건 inline으로 강등
-    return `$${content}$`;
-  });
-}
-
-function checkAnswer(isCorrect) {
-  if (isCorrect) gameState.score++;
-  gameState.currentIdx++;
-
-  if (gameState.currentIdx < gameState.totalQ) renderQuestion();
-  else finishGame();
-}
-
-// ====== 게임 종료 ======
-function finishGame() {
-  clearInterval(gameState.timerInterval);
-  gameState.endTime = new Date();
-
-  const elapsed = ((gameState.endTime - gameState.startTime) / 1000).toFixed(3);
-
-  document.getElementById('final-score').innerText = `${gameState.score} / ${gameState.totalQ}`;
-  document.getElementById('final-time').innerText = `${elapsed}초`;
-
-  const metaEl = document.getElementById('result-meta');
-if (metaEl) {
-  metaEl.innerText = `${getStudentName()} · ${currentSheetName} · ${currentQCount}문제`;
-}
-
-  // 결과 화면으로 이동
-  switchScreen('result-screen');
-}
-
-// ====== 랭킹 화면 ======
-function renderRankingTable(rows) {
-  const wrap = document.getElementById('ranking-table-wrap');
-
-  if (!rows || rows.length === 0) {
-    wrap.innerHTML = `<div style="padding:12px;">아직 기록이 없습니다.</div>`;
-    return;
-  }
-
-  const html = `
-    <table class="ranking-table">
-      <thead>
-        <tr>
-          <th>순위</th>
-          <th>이름</th>
-          <th>점수</th>
-          <th>시간(초)</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map((r, idx) => `
-          <tr>
-            <td>${idx + 1}</td>
-            <td>${String(r.name)}</td>
-            <td>${r.score} / ${r.qCount}</td>
-            <td>${Number(r.time).toFixed(3)}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
-  wrap.innerHTML = html;
-}
-
-
-async function openRankingScreen() {
-  const topicKey = currentSheetName; // "<과정>주제" 그대로 저장/조회 키로 사용
-  const qCount = currentQCount;
-
-  document.getElementById('ranking-meta').innerText =
-    `${topicKey} · ${qCount}문제`;
-
-  switchScreen('ranking-screen');
-
-  try {
-    const rows = await fetchRankings(topicKey, qCount);
-    renderRankingTable(rows);
-  } catch (e) {
-    document.getElementById('ranking-table-wrap').innerHTML =
-      `<div style="padding:12px;">랭킹 로드 실패: ${e.message}</div>`;
-  }
-}
-
-// ====== 과정/토픽 셀렉트 초기화 ======
+// ====== 초기화: 과정/토픽 목록 로드 ======
 async function initCourseTopicSelect() {
-  const courseSel = document.getElementById('course-select');
-  const topicSel = document.getElementById('topic-select');
+  const url = `${GAS_BASE_URL}?action=getCoursesAndTopics`;
+  const res = await fetch(url);
+  const json = await res.json();
 
-  // select는 innerHTML로 option을 넣는 방식이 안전
-  courseSel.innerHTML = `<option value="" disabled selected>로딩 중...</option>`;
-  topicSel.innerHTML = `<option value="" disabled selected>과정을 먼저 선택하세요</option>`;
+  if (!json.ok) throw new Error(json.error || "목록 로드 실패");
 
-  // 배포/권한 문제인지 먼저 test로 확인(실패 시 원인 파악 쉬움)
-  await apiTest();
+  courseTopicMap = json.data;
+  const cSel = document.getElementById('course-select');
+  const tSel = document.getElementById('topic-select');
 
-  courseTopicMap = await fetchCoursesAndTopics();
-
-  courseSel.innerHTML = `<option value="" disabled selected>과정을 선택하세요</option>`;
-  Object.keys(courseTopicMap).forEach(course => {
+  cSel.innerHTML = '<option value="" disabled selected>과정 선택</option>';
+  Object.keys(courseTopicMap).forEach(c => {
     const opt = document.createElement('option');
-    opt.value = course;
-    opt.innerText = course;
-    courseSel.appendChild(opt);
+    opt.value = c; opt.textContent = c;
+    cSel.appendChild(opt);
   });
 
-  courseSel.addEventListener('change', () => {
-    const c = courseSel.value;
-    topicSel.innerHTML = `<option value="" disabled selected>토픽을 선택하세요</option>`;
-
-    if (!c || !courseTopicMap[c]) return;
-
-    courseTopicMap[c].forEach(t => {
+  cSel.onchange = () => {
+    const topics = courseTopicMap[cSel.value] || [];
+    tSel.innerHTML = '<option value="" disabled selected>주제 선택</option>';
+    topics.forEach(t => {
       const opt = document.createElement('option');
-      opt.value = t;
-      opt.innerText = t;
-      topicSel.appendChild(opt);
+      opt.value = t; opt.textContent = t;
+      tSel.appendChild(opt);
     });
-  });
+  };
 }
 
-// ====== 게임 시작 ======
-async function startGame() {
+// ====== [수정] 시작 로직: 메뉴 -> 개념 화면으로 이동 ======
+async function onClickStartBtn() {
   const name = getStudentName();
-  if (!name) {
-    alert('이름을 입력하세요!');
-    document.getElementById('student-name').focus();
-    return;
-  }
+  if (!name) { alert('이름을 입력하세요!'); return; }
 
   const course = document.getElementById('course-select').value;
   const topic = document.getElementById('topic-select').value;
+  if (!course || !topic) { alert('과정과 주제를 선택하세요!'); return; }
 
-  const countRadio = document.querySelector('input[name="q-count"]:checked');
-  const count = countRadio ? parseInt(countRadio.value, 10) : 5;
-
-  if (!course || !topic) {
-    alert('과정과 토픽을 모두 선택하세요!');
-    return;
-  }
-
-  // 현재 선택값 저장(랭킹 저장/조회에 사용)
+  // 전역 상태 업데이트
   currentCourse = course;
   currentTopic = topic;
-  currentSheetName = `<${course}>${topic}`; // 시트명과 동일한 키를 랭킹 topic으로 저장
-  currentQCount = count;
+  currentSheetName = `<${course}>${topic}`;
+  
+  const countRadio = document.querySelector('input[name="q-count"]:checked');
+  currentQCount = countRadio ? parseInt(countRadio.value, 10) : 10;
 
-  switchScreen('game-screen');
-  document.getElementById('question-text').innerText = '문제를 불러오는 중...';
-  document.getElementById('choices-container').innerHTML = '';
+  // 개념 화면(Article Screen) 표시
+  switchScreen('article-screen');
+  document.getElementById('article-title').innerText = `${course} - ${topic}`;
+  const contentBox = document.getElementById('article-content');
+  contentBox.innerHTML = '<p style="text-align:center; padding:20px; color:#888;">개념을 불러오는 중...</p>';
 
   try {
-    const data = await fetchGameData(currentSheetName, count);
+    const res = await fetchDescription(currentSheetName);
+    if (res.ok && res.data) {
+      contentBox.innerHTML = res.data;
+      // 수식 렌더링 (KaTeX)
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(contentBox, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+          ],
+          throwOnError: false
+        });
+      }
+    } else {
+      contentBox.innerHTML = `
+        <div style="text-align:center; padding:30px;">
+          <p style="font-size:1.2rem;">📝</p>
+          <p>아직 개념 설명이 등록되지 않은 주제입니다.<br>바로 문제 풀이를 시작해볼까요?</p>
+        </div>`;
+    }
+  } catch (e) {
+    contentBox.innerHTML = `<p style="color:red; text-align:center;">데이터 로드 중 오류가 발생했습니다.</p>`;
+  }
+}
 
-    gameState.questions = data;
-    gameState.currentIdx = 0;
-    gameState.score = 0;
-    gameState.totalQ = data.length;
+// ====== [추가] 퀴즈 시작 로직: 개념 화면 -> 게임 화면 ======
+async function onStartQuizFromArticle() {
+  switchScreen('game-screen');
 
-    startTimer();   // 인자 제거
+  // 게임 상태 초기화
+  gameState.currentIdx = 0;
+  gameState.score = 0;
+  document.getElementById('question-text').innerText = '준비 중...';
+  document.getElementById('choices-container').innerHTML = '';
+  
+  const stopwatchEl = document.getElementById('stopwatch');
+  if (stopwatchEl) stopwatchEl.innerText = '00:00';
+
+  try {
+    const url = `${GAS_BASE_URL}?action=getGameData&sheetName=${encodeURIComponent(currentSheetName)}&count=${currentQCount}`;
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (!json.ok) throw new Error(json.error || '문제 로드 실패');
+
+    gameState.questions = json.data;
+    gameState.totalQ = json.data.length;
+
+    startTimer();
     renderQuestion();
   } catch (e) {
     alert('문제를 불러오지 못했습니다: ' + e.message);
@@ -332,58 +205,159 @@ async function startGame() {
   }
 }
 
-// ====== 결과: 랭킹 저장 ======
-async function onClickSaveScore() {
-  const name = getStudentName();
-  if (!name) {
-    alert('이름을 입력하세요!');
-    switchScreen('menu-screen');
-    return;
+// ====== 게임 플레이: 문제 렌더링 ======
+function renderQuestion() {
+  const q = gameState.questions[gameState.currentIdx];
+  const qTextEl = document.getElementById('question-text');
+  qTextEl.innerText = q.question;
+
+  // 수식 렌더링
+  if (typeof renderMathInElement === 'function') {
+    renderMathInElement(qTextEl, {
+      delimiters: [{left:'$', right:'$', display:false}],
+      throwOnError: false
+    });
   }
 
-  // 결과화면의 elapsed 문자열("12.345초")에서 숫자만 추출
+  const container = document.getElementById('choices-container');
+  container.innerHTML = '';
+
+  q.choices.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerText = c;
+    btn.onclick = () => checkAnswer(c, q.answer);
+    container.appendChild(btn);
+  });
+}
+
+// ====== 게임 플레이: 정답 체크 ======
+function checkAnswer(selected, correct) {
+  if (String(selected) === String(correct)) {
+    gameState.score++;
+  }
+
+  gameState.currentIdx++;
+  if (gameState.currentIdx < gameState.totalQ) {
+    renderQuestion();
+  } else {
+    endGame();
+  }
+}
+
+// ====== 타이머 로직 ======
+function startTimer() {
+  gameState.startTime = Date.now();
+  if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+
+  gameState.timerInterval = setInterval(() => {
+    const now = Date.now();
+    const diff = (now - gameState.startTime) / 1000;
+    const min = Math.floor(diff / 60);
+    const sec = Math.floor(diff % 60);
+    
+    const sw = document.getElementById('stopwatch');
+    if (sw) {
+      sw.innerText = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    }
+
+    const bar = document.getElementById('time-bar');
+    if (bar) {
+      // 바 애니메이션 등 필요시 로직 추가 가능
+    }
+  }, 100);
+}
+
+// ====== 게임 종료 ======
+function endGame() {
+  clearInterval(gameState.timerInterval);
+  gameState.endTime = Date.now();
+  const elapsed = (gameState.endTime - gameState.startTime) / 1000;
+
+  switchScreen('result-screen');
+  document.getElementById('result-meta').innerText = `${currentCourse} > ${currentTopic}`;
+  document.getElementById('final-score').innerText = `${gameState.score} / ${gameState.totalQ}`;
+  document.getElementById('final-time').innerText = `${elapsed.toFixed(2)}초`;
+}
+
+// ====== 랭킹 저장 API ======
+async function saveScoreToRanking(name, topic, totalQ, score, timeSec) {
+  const url = `${GAS_BASE_URL}?action=saveScore&name=${encodeURIComponent(name)}&topic=${encodeURIComponent(topic)}&totalQ=${totalQ}&score=${score}&timeSec=${timeSec}`;
+  const res = await fetch(url);
+  return await res.json();
+}
+
+// ====== 랭킹 조회 API ======
+async function fetchRankings(topicKey) {
+  const url = `${GAS_BASE_URL}?action=getRankings&topic=${encodeURIComponent(topicKey)}`;
+  const res = await fetch(url);
+  return await res.json();
+}
+
+// ====== 결과: 랭킹 저장 버튼 클릭 ======
+async function onClickSaveScore() {
+  const name = getStudentName();
+  if (!name) { alert('이름을 입력하세요!'); return; }
+
   const elapsedText = document.getElementById('final-time').innerText;
-  const timeSec = String(elapsedText).replace('초', '').trim();
+  const timeSec = elapsedText.replace('초', '').trim();
 
   try {
-    await saveScoreToRanking(name, currentSheetName, currentQCount, gameState.score, timeSec);
-    alert('랭킹에 저장되었습니다!');
+    const res = await saveScoreToRanking(name, currentSheetName, currentQCount, gameState.score, timeSec);
+    if (res.ok) {
+      alert('랭킹에 저장되었습니다!');
+      showRankings();
+    }
   } catch (e) {
     alert('랭킹 저장 실패: ' + e.message);
   }
 }
 
+// ====== 결과: 랭킹 보기 버튼 클릭 ======
+async function showRankings() {
+  switchScreen('ranking-screen');
+  const listWrap = document.getElementById('ranking-table-wrap');
+  listWrap.innerHTML = '<div style="padding:20px;">랭킹을 불러오는 중...</div>';
+  document.getElementById('ranking-meta').innerText = currentTopic;
+
+  try {
+    const res = await fetchRankings(currentSheetName);
+    if (res.ok && res.data.length > 0) {
+      let html = '<table class="ranking-table"><thead><tr><th>순위</th><th>이름</th><th>점수</th><th>시간</th></tr></thead><tbody>';
+      res.data.slice(0, 10).forEach((r, idx) => {
+        html += `<tr><td>${idx+1}</td><td>${r.이름}</td><td>${r.점수}/${r.문제수}</td><td>${r.소요시간}s</td></tr>`;
+      });
+      html += '</tbody></table>';
+      listWrap.innerHTML = html;
+    } else {
+      listWrap.innerHTML = '<div style="padding:20px;">등록된 랭킹이 없습니다.</div>';
+    }
+  } catch (e) {
+    listWrap.innerHTML = '<div style="padding:20px; color:red;">랭킹 로드 실패</div>';
+  }
+}
+
 // ====== 이벤트 바인딩 ======
 window.addEventListener('load', async () => {
+  // 1. 초기 데이터 로드 (과정/주제)
   try {
     await initCourseTopicSelect();
   } catch (e) {
-    alert(
-      '초기화 실패(배포/권한/URL 확인 필요): ' + e.message +
-      '\n- GAS 웹앱 URL이 exec인지\n- "웹 앱" 배포에서 액세스가 "모든 사용자"인지\n- 스프레드시트 접근 권한 승인됐는지'
-    );
+    console.error("Init Error:", e);
   }
 
-  document.getElementById('start-btn').addEventListener('click', startGame);
+  // 2. 메인 메뉴 버튼
+  bindClick('start-btn', onClickStartBtn);
 
-  document.getElementById('back-home-btn').addEventListener('click', () => switchScreen('menu-screen'));
-bindClick('start-btn', startGame);
+  // 3. 개념 화면 버튼
+  bindClick('go-to-quiz-btn', onStartQuizFromArticle);
 
-bindClick('back-home-btn', () => switchScreen('menu-screen'));
-bindClick('back-home-btn-2', () => switchScreen('menu-screen'));
-bindClick('back-result-btn', () => switchScreen('result-screen'));
+  // 4. 결과 화면 버튼
+  bindClick('save-score-btn', onClickSaveScore);
+  bindClick('view-ranking-btn', showRankings);
+  bindClick('back-home-btn', () => switchScreen('menu-screen'));
 
-bindClick('save-score-btn', onClickSaveScore);
-bindClick('view-ranking-btn', openRankingScreen);
-
+  // 5. 랭킹 화면 버튼
+  bindClick('back-result-btn', () => switchScreen('result-screen'));
+  bindClick('back-home-btn-2', () => switchScreen('menu-screen'));
 });
-
-
-
-
-
-
-
-
-
-
