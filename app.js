@@ -147,6 +147,9 @@ async function onStartQuizFromArticle() {
   } catch (e) {
     alert(e.message);
     switchScreen('menu-screen');
+    } finally {
+     if(btn) btn.disabled = false; // [추가] 로직 종료 후 버튼 활성화
+  }
   }
 }
 
@@ -234,7 +237,12 @@ async function showRanking() {
     if (json.ok && json.data.length > 0) {
       let html = '<table class="ranking-table"><thead><tr><th>순위</th><th>이름</th><th>점수</th><th>시간</th></tr></thead><tbody>';
       json.data.forEach((r, i) => {
-        html += `<tr><td>${i+1}</td><td>${r.이름}</td><td>${r.점수}/${r.문제수}</td><td>${r.소요시간}초</td></tr>`;
+        html += `<tr>
+           <td>${i+1}</td>
+           <td>${r.name}</td>
+           <td>${r.score}/${r.qCount}</td>
+           <td>${r.time}초</td>
+         </tr>`;
       });
       html += '</tbody></table>';
       wrap.innerHTML = html;
@@ -266,3 +274,4 @@ window.addEventListener('load', () => {
     }
   });
 });
+
