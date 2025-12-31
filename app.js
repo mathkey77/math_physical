@@ -111,25 +111,32 @@ async function onClickStartBtn() {
   if (!name) return alert("이름을 입력해주세요.");
   if (!course || !topic) return alert("과정과 주제를 선택해주세요.");
 
+  // ✅ [수정] 여기서 문제 수를 미리 저장합니다!
+  const qRadio = document.querySelector('input[name="q-count"]:checked');
+  currentQCount = qRadio ? Number(qRadio.value) : 10;
+
   currentCourse = course;
   currentTopic = topic;
   currentSheetName = `<${course}>${topic}`;
 
   document.getElementById('article-title').innerText = `${course} - ${topic}`;
-  document.getElementById('article-content').innerText = "설명을 불러오는 중...";
+  
+  const contentEl = document.getElementById('article-content');
+  contentEl.innerText = "설명을 불러오는 중...";
 
   switchScreen('article-screen');
 
   try {
     const res = await fetch(`${GAS_BASE_URL}?action=getDescription&topic=${encodeURIComponent(currentSheetName)}`);
     const json = await res.json();
-    const el = document.getElementById('article-content');
-    el.innerHTML = json.ok && json.data ? json.data : "설명이 없습니다.";
+    
+    // ✅ [수정] 텍스트 넣고나서 수식 렌더링 실행
+    contentEl.innerHTML = json.ok && json.data ? json.data : "설명이 없습니다.";
+    renderMath(contentEl); 
   } catch {
-    document.getElementById('article-content').innerText = "설명 로드 실패";
+    contentEl.innerText = "설명 로드 실패";
   }
 }
-
 // ====== 개념 → 퀴즈 ======
 async function onStartQuizFromArticle() {
   if (!currentSheetName) {
@@ -140,23 +147,19 @@ async function onStartQuizFromArticle() {
   await startQuiz();
 }
 
-// ====== 퀴즈 시작 ======
-// 1. startQuiz() 함수 수정
+// ====== 퀴즈 시작 (수정됨) ======
 async function startQuiz() {
-  // ✅ 상태 검증만 수행 (복구 시도 제거)
   if (!currentSheetName) {
     alert("주제 정보가 유실되었습니다.\n처음 화면으로 돌아갑니다.");
     switchScreen('menu-screen');
     return;
   }
-
-  console.log("📌 startQuiz Sheet:", currentSheetName);
-
-  const qRadio = document.querySelector('input[name="q-count"]:checked');
-  currentQCount = qRadio ? Number(qRadio.value) : 10;
+  
+  // (여기 있던 라디오 버튼 읽는 코드 삭제됨 - 위에서 이미 저장함)
 
   switchScreen('game-screen');
-  document.getElementById('q-text').innerText = "문제를 불러오는 중...";
+  const qTextEl = document.getElementById('q-text');
+  qTextEl.innerText = "문제를 불러오는 중...";
 
   try {
     const url = `${GAS_BASE_URL}?action=getGameData&topic=${encodeURIComponent(currentSheetName)}&count=${currentQCount}`;
@@ -182,6 +185,7 @@ async function startQuiz() {
   }
 }
 
+
 // ====== 타이머 ======
 function startTimer() {
   clearInterval(gameState.timerInterval);
@@ -196,7 +200,7 @@ function startTimer() {
   }, 1000);
 }
 
-// ====== 문제 렌더 ======
+// ====== 문제 렌더 (수정됨) ======
 function renderQuestion() {
   const q = gameState.questions[gameState.currentIdx];
   if (!q) return;
@@ -204,16 +208,21 @@ function renderQuestion() {
   const progress = ((gameState.currentIdx + 1) / gameState.totalQ) * 100;
   document.getElementById('time-bar').style.width = progress + "%";
 
-  document.getElementById('q-text').innerHTML = q.text;
+  const qTextEl = document.getElementById('q-text');
+  qTextEl.innerHTML = q.text; 
+  renderMath(qTextEl); // ✅ 문제 텍스트 수식 렌더링
+
   const wrap = document.getElementById('choices');
   wrap.innerHTML = "";
 
   q.choices.forEach(c => {
     const btn = document.createElement('button');
-    btn.innerText = c;
+    btn.innerHTML = c; // ✅ 버튼 내부 텍스트 HTML로 처리
     btn.onclick = () => checkAnswer(c);
     wrap.appendChild(btn);
   });
+  
+  renderMath(wrap); // ✅ 보기 버튼들도 일괄 수식 렌더링
 }
 
 // ====== 정답 체크 ======
@@ -276,6 +285,18 @@ window.addEventListener('load', () => {
     }
   });
 });
+function renderMath(element) {
+  if (window.renderMathInElement) {
+    renderMathInElement(element, {
+      delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false},
+        {left: "\\(", right: "\\)", display: false},
+        {left: "\\[", right: "\\]", display: true}
+      ]
+    });
+  }
+}
 
 
 
