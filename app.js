@@ -178,46 +178,89 @@ function renderQuestion() {
 
   if (!qTextEl || !choicesEl) return;
 
-  // 1. q가 유효한지 확인
+  // 1. 데이터 유효성 검사
   if (!q) {
     qTextEl.innerText = "문제를 찾을 수 없습니다.";
     return;
   }
 
-  console.log(`현재 문제(${gameState.currentIdx}):`, q); // 디버깅용
-
-  // 2. 질문 출력 (q가 객체라면 q.question 속성을 사용)
-  // [object Object]가 나오는 이유는 객체 자체를 출력하려 했기 때문
-const qString = (typeof q === 'object') ? (q.question || q.q) : String(q);
+  // [수정 핵심 1] 문제 텍스트 추출
+  // GAS에서 { question: "문제내용", ... } 형태로 보내주므로 q.question을 써야 함
+  // 혹시 q가 그냥 문자열일 경우를 대비해 String(q) 처리
+  let qTextValue = "";
+  if (typeof q === 'object') {
+    qTextValue = q.question || q.q || "문제 내용 없음"; 
+  } else {
+    qTextValue = String(q);
+  }
   
-  qTextEl.innerHTML = ''; // 초기화
-  qTextEl.innerText = qString; 
+  // HTML로 넣어야 수식($$)이 텍스트로 안 깨짐
+  qTextEl.innerHTML = qTextValue; 
   choicesEl.innerHTML = '';
 
-  // 3. 보기 출력 (q.choices 배열 확인)
+  // [수정 핵심 2] 보기 버튼 생성
   const choices = Array.isArray(q.choices) ? q.choices : [];
   
   if (choices.length === 0) {
-    choicesEl.innerHTML = "<p style='color:red;'>보기가 없습니다. 시트 형식을 확인하세요.</p>";
+    choicesEl.innerHTML = "<p style='color:red; width:100%; text-align:center;'>보기가 없습니다.</p>";
   } else {
     choices.forEach(choice => {
       const btn = document.createElement('button');
       btn.className = 'choice-btn';
-      // 보기가 객체일 경우를 대비해 String으로 변환
-      btn.innerText = (typeof choice === 'object') ? JSON.stringify(choice) : String(choice);
-      btn.onclick = () => handleChoiceClick(choice, q.answer);
+      
+      // [수정 핵심 3] 객체 통째로 넣지 말고, .text 속성만 꺼내기
+      // choice 데이터 구조: { text: "1/2", isCorrect: false }
+      let choiceText = "";
+      let isCorrect = false;
+
+      if (typeof choice === 'object') {
+        choiceText = choice.text || ""; // .text만 추출!
+        isCorrect = choice.isCorrect;
+      } else {
+        choiceText = String(choice);
+        // 문자열만 왔을 경우 정답 비교 로직이 애매해지므로 주의 (현재 구조엔 없음)
+      }
+
+      // 텍스트에 줄바꿈 문자(\n)가 있으면 <br>로 변환 (옵션)
+      btn.innerHTML = choiceText.replace(/\n/g, '<br>');
+      
+      // 클릭 이벤트 연결
+      btn.onclick = () => handleChoiceClick(choiceText, q.answer || isCorrect); 
+      // 참고: handleChoiceClick 내부 로직에 따라 두 번째 인자는 
+      // (1) 정답 텍스트가 될 수도 있고 (2) true/false가 될 수도 있습니다.
+      // 현재 GAS 코드는 choice 객체 안에 isCorrect가 있으므로 그걸 넘기는 게 가장 정확합니다.
+      btn.onclick = () => {
+          // 정답 여부를 명확히 넘김
+          if(choice.isCorrect) {
+              gameState.score++;
+          }
+          gameState.currentIdx++;
+          if (gameState.currentIdx < gameState.totalQ) {
+              renderQuestion();
+          } else {
+              endGame();
+          }
+      };
+
       choicesEl.appendChild(btn);
     });
   }
 
-  // 4. 수식 렌더링
+  // 3. 수식 렌더링 (KaTeX)
+  // 화면에 텍스트를 다 뿌린 뒤에 수식으로 변환
   if (window.renderMathInElement) {
     renderMathInElement(qTextEl, {
-      delimiters: [{left: '$', right: '$', display: false}],
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
       throwOnError: false
     });
     renderMathInElement(choicesEl, {
-      delimiters: [{left: '$', right: '$', display: false}],
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
       throwOnError: false
     });
   }
@@ -289,4 +332,5 @@ window.addEventListener('load', async () => {
   if (saveBtn) saveBtn.onclick = onClickSaveScore;
   if (homeBtn) homeBtn.onclick = () => switchScreen('menu-screen');
 });
+
 
