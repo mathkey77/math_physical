@@ -180,10 +180,12 @@ async function onStartQuizFromArticle() {
 
   switchScreen('game-screen');
   document.getElementById('q-text').innerText = "문제를 생성하고 있습니다...";
-  
+  const qCount = document.querySelector('input[name="q-count"]:checked').value;
+currentQCount = Number(qCount);
+
   try {
     // 2. 호출 시 encodeURIComponent를 확실히 적용
-    const url = `${GAS_BASE_URL}?action=getGameData&topic=${encodeURIComponent(currentSheetName)}&count=10`;
+    const url = `${GAS_BASE_URL}?action=getGameData&topic=${encodeURIComponent(currentSheetName)}&count=${currentQCount};
     const res = await fetch(url);
     const json = await res.json();
     
@@ -228,7 +230,7 @@ function renderQuestion() {
   if (!q) return; // 데이터가 없으면 중단
 
   // 프로그래스 바 업데이트
-  const progressPercent = (gameState.currentIdx / gameState.totalQ) * 100;
+  const progressPercent = ((gameState.currentIdx + 1) / gameState.totalQ) * 100;
   document.getElementById('time-bar').style.width = progressPercent + "%";
 
   // 문제 텍스트 (서버 데이터 키 확인: q.question 인지 q.text 인지)
@@ -426,58 +428,7 @@ window.addEventListener('load', () => {
     `);
   });
 });
-/* 전체 화면 중앙 정렬 보정 */
-.screen {
-  display: none;
-  flex-direction: column;
-  align-items: center; /* 모든 내부 요소를 가로 중앙으로 */
-  justify-content: flex-start;
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 20px;
-  box-sizing: border-box;
-}
 
-.screen.active {
-  display: flex;
-}
 
-/* 버튼 중앙 정렬 */
-.nes-btn {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  width: 100%; /* 혹은 원하는 너비 */
-}
-
-/* 푸터 레이아웃 교정 */
-.main-footer {
-  width: 100%;
-  max-width: 600px;
-  margin: 40px auto 20px auto; /* 위아래 여백 주고 중앙 정렬 */
-  padding: 20px;
-  text-align: center;
-  border-top: 1px solid #eee;
-  clear: both; /* 주변 요소 간섭 방지 */
-}
-
-.footer-links {
-  display: flex;
-  justify-content: center; /* 가로 중앙 */
-  align-items: center;
-  gap: 15px;
-  flex-wrap: wrap; /* 모바일 대응 */
-}
-
-/* 섹션 카드 내 텍스트 정렬 */
-.section-card {
-  width: 100%;
-  text-align: center; /* 기본은 중앙 */
-}
-.section-card p, .section-card ul {
-  text-align: left; /* 본문 내용은 가독성을 위해 왼쪽 */
-  display: inline-block; /* 내용만큼만 차지하여 중앙에 위치하게 함 */
-}
 
 
