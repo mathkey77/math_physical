@@ -185,7 +185,7 @@ currentQCount = Number(qCount);
 
   try {
     // 2. 호출 시 encodeURIComponent를 확실히 적용
-    const url = `${GAS_BASE_URL}?action=getGameData&topic=${encodeURIComponent(currentSheetName)}&count=${currentQCount};
+    const url = `${GAS_BASE_URL}?action=getGameData&topic=${encodeURIComponent(currentSheetName)}&count=${currentQCount}`;
     const res = await fetch(url);
     const json = await res.json();
     
@@ -428,6 +428,7 @@ window.addEventListener('load', () => {
     `);
   });
 });
+
 
 
 
