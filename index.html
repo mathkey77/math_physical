@@ -124,13 +124,12 @@
   </div>
 
   <div id="game-screen" class="screen">
-    <div class="progress-area">
-      <div id="time-bar-wrapper" class="progress-wrap">
-        <div id="time-bar" class="progress-bar"></div>
-      </div>
-      <div class="progress-overlay">
-        <span id="stopwatch" class="progress-chip">00:00</span>
-      </div>
+<div class="timer-wrapper">
+  <div class="timer-container">
+    <div id="time-bar" style="width: 0%; height: 100%; background-color: var(--accent); transition: width 0.3s ease;"></div>
+  </div>
+  <div id="stopwatch">00:00</div>
+</div>
     </div>
 
     <div class="question-box">
@@ -207,6 +206,7 @@
 
 </body>
 </html>
+
 
 
 
