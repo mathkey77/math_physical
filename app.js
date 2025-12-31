@@ -164,36 +164,46 @@ function onClickStartBtn() {
 }
 
 // ====== [핵심 기능 3] 퀴즈 실행 ======
+// [수정] 퀴즈 시작 함수 - currentSheetName이 유효한지 다시 한번 체크
 async function onStartQuizFromArticle() {
-  const btn = document.getElementById('go-to-quiz-btn');
-  if(btn) btn.disabled = true; // 중복 클릭 방지
+  // 1. 시트 이름 재확인 (방어 코드)
+  if (!currentSheetName) {
+    const cVal = document.getElementById('course-select').value;
+    const tVal = document.getElementById('topic-select').value;
+    if(!cVal || !tVal) {
+      alert("선택된 주제 정보가 없습니다. 처음부터 다시 시도해주세요.");
+      location.reload();
+      return;
+    }
+    currentSheetName = `<${cVal}>${tVal}`;
+  }
 
   switchScreen('game-screen');
-  document.getElementById('q-text').innerText = "문제를 불러오는 중...";
-  document.getElementById('choices').innerHTML = "";
+  document.getElementById('q-text').innerText = "문제를 생성하고 있습니다...";
   
   try {
-    const res = await fetch(`${GAS_BASE_URL}?action=getGameData&topic=${encodeURIComponent(currentSheetName)}&count=${currentQCount}`);
+    // 2. 호출 시 encodeURIComponent를 확실히 적용
+    const url = `${GAS_BASE_URL}?action=getGameData&topic=${encodeURIComponent(currentSheetName)}&count=10`;
+    const res = await fetch(url);
     const json = await res.json();
-
-    if (json.ok) {
-      // 게임 초기화
-      gameState.questions = json.data; 
-      gameState.totalQ = json.data.length;
-      gameState.currentIdx = 0;
-      gameState.score = 0;
-      
+    
+    if (json.ok && json.data) {
+      gameState = { 
+        questions: json.data, 
+        currentIdx: 0, 
+        score: 0, 
+        startTime: Date.now(), 
+        totalQ: json.data.length 
+      };
       startTimer();
       renderQuestion();
     } else {
-      alert("문제를 가져오지 못했습니다: " + json.error);
-      switchScreen('menu-screen');
+      throw new Error(json.error || "데이터 없음");
     }
-  } catch (e) {
-    alert("오류 발생: " + e.message);
-    switchScreen('menu-screen');
-  } finally {
-    if(btn) btn.disabled = false;
+  } catch (e) { 
+    console.error(e);
+    alert("문제를 가져오지 못했습니다: " + e.message); 
+    switchScreen('menu-screen'); 
   }
 }
 
@@ -416,4 +426,5 @@ window.addEventListener('load', () => {
     `);
   });
 });
+
 
