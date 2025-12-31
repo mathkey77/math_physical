@@ -141,23 +141,17 @@ async function onStartQuizFromArticle() {
 }
 
 // ====== 퀴즈 시작 ======
+// 1. startQuiz() 함수 수정
 async function startQuiz() {
-    if (!currentSheetName) {
-    const course = document.getElementById('course-select')?.value || currentCourse;
-    const topic = document.getElementById('topic-select')?.value || currentTopic;
-
-    if (!course || !topic) {
-      alert("과정/주제 정보가 유실되었습니다.\n처음 화면으로 돌아갑니다.");
-      switchScreen('menu-screen');
-      return;
-    }
-
-    currentCourse = course;
-    currentTopic = topic;
-    currentSheetName = `<${course}>${topic}`;
+  // ✅ 상태 검증만 수행 (복구 시도 제거)
+  if (!currentSheetName) {
+    alert("주제 정보가 유실되었습니다.\n처음 화면으로 돌아갑니다.");
+    switchScreen('menu-screen');
+    return;
   }
 
   console.log("📌 startQuiz Sheet:", currentSheetName);
+
   const qRadio = document.querySelector('input[name="q-count"]:checked');
   currentQCount = qRadio ? Number(qRadio.value) : 10;
 
@@ -181,7 +175,6 @@ async function startQuiz() {
 
     startTimer();
     renderQuestion();
-
   } catch (e) {
     alert("문제를 불러오지 못했습니다.");
     console.error(e);
@@ -226,8 +219,7 @@ function renderQuestion() {
 // ====== 정답 체크 ======
 function checkAnswer(choice) {
   const q = gameState.questions[gameState.currentIdx];
-  if (choice === q.answer) gameState.score++;
-
+  if (choice === q.answer) gameState.score++;  // ✅ q.answer 사용
   gameState.currentIdx++;
   if (gameState.currentIdx < gameState.totalQ) renderQuestion();
   else endGame();
@@ -260,11 +252,29 @@ async function showRanking() {
   }
 }
 
-// ====== 실행 ======
+// 3. 이벤트 바인딩 추가 (window.addEventListener 내부)
 window.addEventListener('load', () => {
   initCourseTopicSelect();
   bindClick('start-btn', onClickStartBtn);
   bindClick('go-to-quiz-btn', onStartQuizFromArticle);
   bindClick('view-ranking-btn', showRanking);
+
+  // ✅ 누락된 버튼들
+  bindClick('back-to-menu-from-article', () => switchScreen('menu-screen'));
+  bindClick('back-to-result-btn', () => switchScreen('result-screen'));
+  bindClick('save-score-btn', async () => {
+    const name = getStudentName();
+    const duration = ((gameState.endTime - gameState.startTime) / 1000).toFixed(2);
+    try {
+      const url = `${GAS_BASE_URL}?action=saveScore&name=${encodeURIComponent(name)}&topic=${encodeURIComponent(currentSheetName)}&totalQ=${gameState.totalQ}&score=${gameState.score}&timeSec=${duration}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.ok) alert("랭킹에 저장되었습니다!");
+      else alert("저장 실패: " + json.error);
+    } catch (e) {
+      alert("저장 중 오류 발생");
+    }
+  });
 });
+
 
