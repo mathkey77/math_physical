@@ -40,36 +40,88 @@ function bindClick(id, handler) {
 }
 
 // ====== [초기화] 과정 및 토픽 목록 로드 ======
+// 캐시 유효 시간 (예: 60분)
+const CACHE_DURATION = 60 * 60 * 1000; 
+
 async function initCourseTopicSelect() {
+  const courseSel = document.getElementById('course-select');
+  const topicSel = document.getElementById('topic-select');
+
+  // 로딩 상태 표시
+  courseSel.innerHTML = '<option>로딩 중...</option>';
+  courseSel.disabled = true;
+  topicSel.disabled = true;
+
   try {
-    const res = await fetch(`${GAS_BASE_URL}?action=getCoursesAndTopics`);
-    const json = await res.json();
-    if (!json.ok) return;
+    let data = null;
 
-    courseTopicMap = json.data;
-    const cSel = document.getElementById('course-select');
-    const tSel = document.getElementById('topic-select');
+    // 1. 로컬 스토리지 확인
+    const saved = localStorage.getItem('math_course_data');
+    const savedTime = localStorage.getItem('math_course_time');
+    const now = Date.now();
 
-    if (!cSel || !tSel) return;
+    if (saved && savedTime && (now - parseInt(savedTime) < CACHE_DURATION)) {
+      // 캐시가 유효하면 바로 사용 (즉시 로딩됨)
+      console.log('✅ 로컬 캐시 사용');
+      data = JSON.parse(saved);
+    } else {
+      // 캐시가 없거나 만료되었으면 GAS 서버 요청
+      console.log('📡 서버 데이터 요청 중...');
+      const res = await fetch(`${GAS_BASE_URL}?action=getCoursesAndTopics`);
+      const json = await res.json();
+      
+      if (json.ok) {
+        data = json.data;
+        // 데이터 저장 및 시간 기록
+        localStorage.setItem('math_course_data', JSON.stringify(data));
+        localStorage.setItem('math_course_time', String(now));
+      } else {
+        throw new Error("데이터 형식이 올바르지 않습니다.");
+      }
+    }
 
-    cSel.innerHTML = '<option value="" disabled selected>과정 선택</option>';
-    Object.keys(courseTopicMap).forEach(c => {
+    // 2. 데이터가 준비되었으므로 UI 업데이트
+    courseTopicMap = data; // 전역 변수에 할당
+    
+    // 과정(Course) 목록 채우기
+    const courses = Object.keys(courseTopicMap);
+    courseSel.innerHTML = '<option value="">과정 선택</option>';
+    
+    courses.forEach(c => {
       const opt = document.createElement('option');
-      opt.value = c; opt.textContent = c;
-      cSel.appendChild(opt);
+      opt.value = c;
+      opt.innerText = c;
+      courseSel.appendChild(opt);
     });
 
-    cSel.onchange = () => {
-      const topics = courseTopicMap[cSel.value] || [];
-      tSel.innerHTML = '<option value="" disabled selected>주제 선택</option>';
-      topics.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t; opt.textContent = t;
-        tSel.appendChild(opt);
-      });
-    };
+    courseSel.disabled = false;
+    courseSel.onchange = onCourseChange; // 코스 변경 시 토픽 업데이트 함수 연결
+
   } catch (e) {
-    console.error("초기 로드 에러:", e);
+    console.error(e);
+    courseSel.innerHTML = '<option>로드 실패 (새로고침)</option>';
+    alert("데이터를 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.");
+  }
+}
+
+// [보조 함수] 코스 변경 시 토픽 목록 갱신
+function onCourseChange() {
+  const courseSel = document.getElementById('course-select');
+  const topicSel = document.getElementById('topic-select');
+  
+  const selectedCourse = courseSel.value;
+  topicSel.innerHTML = '<option value="">주제 선택</option>';
+  
+  if (selectedCourse && courseTopicMap[selectedCourse]) {
+    courseTopicMap[selectedCourse].forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t; // 주제명
+      opt.innerText = t;
+      topicSel.appendChild(opt);
+    });
+    topicSel.disabled = false;
+  } else {
+    topicSel.disabled = true;
   }
 }
 
@@ -167,41 +219,61 @@ function startTimer() {
 // ====== [단계 3] 문제 렌더링 및 정답 처리 ======
 function renderQuestion() {
   const q = gameState.questions[gameState.currentIdx];
-  const qTextEl = document.getElementById('question-text');
-  const choicesEl = document.getElementById('choices-container');
+  const total = gameState.totalQ;
+  const current = gameState.currentIdx + 1; // 현재 문제 번호 (1부터 시작)
 
-  if (!q || !qTextEl || !choicesEl) return;
+  // 1. 진행률 바 업데이트 (Progress Bar 로직)
+  // 전체 문제 수 대비 현재 문제 번호의 비율로 width 설정
+  const progressPercent = (gameState.currentIdx / total) * 100; 
+  const timeBar = document.getElementById('time-bar');
+  if (timeBar) {
+    timeBar.style.width = `${progressPercent}%`;
+    // (선택사항) 꽉 찼을 때 색상을 바꾸고 싶다면 CSS 추가 가능
+  }
 
-  qTextEl.innerHTML = q.question || q.q || "문제 없음";
-  choicesEl.innerHTML = '';
+  // 2. 문제 번호 표시 (예: "Q. 3 / 10")
+  const qNumEl = document.getElementById('q-number');
+  if (qNumEl) qNumEl.innerText = `Q. ${current} / ${total}`;
 
-  const choices = Array.isArray(q.choices) ? q.choices : [];
-  choices.forEach(choice => {
-    const btn = document.createElement('button');
-    btn.className = 'choice-btn';
-    const choiceText = (typeof choice === 'object') ? choice.text : String(choice);
-    btn.innerHTML = choiceText.replace(/\n/g, '<br>');
-    
-    btn.onclick = () => {
-      if (choice.isCorrect || choiceText === q.answer) {
-        gameState.score++;
-      }
-      gameState.currentIdx++;
-      if (gameState.currentIdx < gameState.totalQ) {
-        renderQuestion();
-      } else {
-        endGame();
-      }
-    };
-    choicesEl.appendChild(btn);
-  });
-
-  if (window.renderMathInElement) {
-    renderMathInElement(document.getElementById('game-screen'), {
-      delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}],
-      throwOnError: false
+  // 3. 문제 텍스트 렌더링 (KaTeX)
+  const qTextEl = document.getElementById('q-text');
+  if (qTextEl) {
+    // 줄바꿈 처리 및 KaTeX 렌더링
+    qTextEl.innerHTML = q.text.replace(/\n/g, '<br>');
+    renderMathInElement(qTextEl, {
+      delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false}
+      ]
     });
   }
+
+  // 4. 보기 버튼 렌더링 (기존 로직 유지)
+  const choicesDiv = document.getElementById('choices');
+  choicesDiv.innerHTML = '';
+
+  // 보기 배열 섞기 (옵션) - 원치 않으면 q.choices 그대로 사용
+  // 여기서는 단순히 q.choices를 순회한다고 가정
+  q.choices.forEach((choiceText) => {
+    const btn = document.createElement('button');
+    btn.className = 'nes-btn choice-btn'; // 스타일 클래스
+    
+    // 보기 텍스트 넣기
+    btn.innerHTML = choiceText;
+    
+    // 클릭 이벤트
+    btn.onclick = () => checkAnswer(choiceText);
+
+    choicesDiv.appendChild(btn);
+  });
+
+  // 보기 내부 수식 렌더링
+  renderMathInElement(choicesDiv, {
+    delimiters: [
+      {left: "$$", right: "$$", display: true},
+      {left: "$", right: "$", display: false}
+    ]
+  });
 }
 
 function endGame() {
@@ -264,14 +336,37 @@ window.addEventListener('load', () => {
   bindClick('back-home-btn', () => location.reload());
   bindClick('back-home-btn-2', () => location.reload());
   bindClick('back-result-btn', () => switchScreen('result-screen'));
+  bindClick('btn-service-info', () => {
+    showInfoScreen('서비스 소개', `
+      <p><strong>Math Physical</strong>은 수학 개념 학습과 연산 피지컬 훈련을 동시에 할 수 있는 서비스입니다.</p>
+      <p>구글 시트를 기반으로 작동하며, 누구나 무료로 이용할 수 있습니다.</p>
+      <p>제한 시간 없이 나만의 페이스로 문제를 풀고 랭킹에 도전해보세요!</p>
+    `);
+  });
 
-  bindClick('footer-intro', () => switchScreen('intro-screen'));
-  bindClick('footer-privacy', () => switchScreen('privacy-screen'));
-  bindClick('footer-contact', () => {
-    const email = "mathkey77@gmail.com";
-    if (confirm(`운영자에게 문의하시겠습니까?\n(${email})`)) {
-      window.location.href = `mailto:${email}`;
-    }
+  bindClick('btn-privacy', () => {
+    showInfoScreen('개인정보처리방침', `
+      <p>본 서비스는 <strong>닉네임</strong>과 <strong>게임 기록(점수, 시간)</strong> 외의 개인식별정보를 수집하지 않습니다.</p>
+      <p>수집된 데이터는 랭킹 산정 목적으로만 사용되며, 언제든지 구글 시트에서 삭제될 수 있습니다.</p>
+    `);
+  });
+
+  bindClick('btn-contact', () => {
+    showInfoScreen('문의하기', `
+      <p>오류 제보나 기능 제안은 아래 이메일로 연락주세요.</p>
+      <p style="margin-top:10px;">📧 <strong>mathkey77@gmail.com</strong></p> `);
   });
 });
+
+// [보조 함수] 정보 화면 띄우기 (만약 없다면 추가)
+function showInfoScreen(title, htmlContent) {
+  const titleEl = document.getElementById('info-title');
+  const contentEl = document.getElementById('info-content');
+  
+  if(titleEl) titleEl.innerText = title;
+  if(contentEl) contentEl.innerHTML = htmlContent;
+  
+  switchScreen('info-screen'); // info-screen 화면으로 전환
+}
+
 
