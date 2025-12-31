@@ -319,37 +319,48 @@ async function onClickSaveScore() {
 }
 
 // ====== [이벤트 바인딩] ======
+// app.js 맨 아래쪽의 로드 이벤트 부분
+
 window.addEventListener('load', async () => {
-  await initCourseTopicSelect();
+  // 1. 기본 과정/토픽 데이터 로드
+  try {
+    await initCourseTopicSelect();
+  } catch (e) {
+    console.error("초기 데이터 로드 실패:", e);
+  }
 
-  const startBtn = document.getElementById('start-btn');
-  const quizStartBtn = document.getElementById('go-to-quiz-btn');
-  const saveBtn = document.getElementById('save-score-btn');
-  const homeBtn = document.getElementById('back-home-btn');
+  // 2. 메인 화면 버튼들 연결
+  bindClick('start-btn', onStartBtnClick);
+  bindClick('go-to-quiz-btn', startQuizDirectly); // 아티클 읽고 시작하는 버튼
+  bindClick('save-score-btn', onClickSaveScore);
+  bindClick('view-ranking-btn', () => showRanking(currentSheetName));
+  bindClick('back-home-btn', () => location.reload()); // 깔끔하게 처음으로
+  bindClick('back-home-btn-2', () => location.reload());
+  bindClick('back-result-btn', () => switchScreen('result-screen'));
 
-  if (startBtn) startBtn.onclick = onClickStartBtn;
-  if (quizStartBtn) quizStartBtn.onclick = onStartQuizFromArticle;
-  if (saveBtn) saveBtn.onclick = onClickSaveScore;
-  if (homeBtn) homeBtn.onclick = () => switchScreen('menu-screen');
-// 1. 소개 버튼 연결
-  bindClick('nav-intro', () => switchScreen('intro-screen'));
-  bindClick('footer-intro', () => switchScreen('intro-screen')); // 푸터에 있다면
+  // 3. [중요] 푸터 버튼들 연결 (HTML의 ID와 일치시킴)
+  
+  // 소개 버튼
+  bindClick('footer-intro', () => {
+    console.log("소개 화면으로 전환"); // 디버깅용
+    switchScreen('intro-screen');
+  });
 
-  // 2. 개인정보 버튼 연결
-  bindClick('nav-privacy', () => switchScreen('privacy-screen'));
-  bindClick('footer-privacy', () => switchScreen('privacy-screen')); // 푸터에 있다면
+  // 개인정보 버튼
+  bindClick('footer-privacy', () => {
+    switchScreen('privacy-screen');
+  });
 
-  // 3. 문의하기 버튼 연결 (이메일 보내기 창 띄우기)
-  const contactHandler = () => {
-    // 본인의 이메일 주소로 변경하세요!
-    const email = "your-email@gmail.com"; 
-    if (confirm(`운영자에게 메일을 보내시겠습니까?\n(${email})`)) {
+  // 문의하기 버튼
+  bindClick('footer-contact', () => {
+    const email = "mathkey77@gmail.com"; // 본인 이메일로 수정
+    if (confirm(`운영자에게 문의 메일을 보내시겠습니까?\n(${email})`)) {
       window.location.href = `mailto:${email}`;
     }
-  };
-  bindClick('nav-contact', contactHandler);
-  bindClick('footer-contact', contactHandler);
+  });
 });
+});
+
 
 
 
