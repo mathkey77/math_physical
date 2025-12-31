@@ -1,5 +1,5 @@
 // ====== 설정: GAS 웹앱 URL ======
-const GAS_BASE_URL = "https://script.google.com/macros/s/AKfycbw0Jry0N4CJbvJCEXmnD6wH_hOLxfv1wpMruNuT6jl3HYONPwzvM9nKogwLMt2G_ttviA/exec";
+const GAS_BASE_URL = "https://script.google.com/macros/s/AKfycbxnEwKcaxk9gcfAEiG4rXnxuu7o7EtAOGw0ib0sw2naeQBHCW--jpEKa05ZDj4w1Qu9oQ/exec";
 
 // ====== 전역 상태 ======
 let courseTopicMap = {};
@@ -276,5 +276,6 @@ window.addEventListener('load', () => {
     }
   });
 });
+
 
 
