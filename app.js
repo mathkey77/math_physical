@@ -181,7 +181,7 @@ function onStartArticle() {
 }
 
 // ====== [핵심 기능 3] 퀴즈 실행 ======
-function onStartQuizFromArticle() {
+async functionㅁ뇨ㅜfunctionㅁ뇨ㅜㅊfunction() {
   // 🔥 여기서 다시 확정
   const courseSelect = document.getElementById('course-select');
   const topicSelect = document.getElementById('topic-select');
@@ -202,7 +202,7 @@ function onStartQuizFromArticle() {
 
   console.log("📌 최종 Sheet Name:", currentSheetName);
 
-  startQuiz(); // ← 여기서 fetch
+ await startQuiz(); // ← 여기서 fetch
 }
 
   switchScreen('game-screen');
@@ -455,6 +455,7 @@ window.addEventListener('load', () => {
     `);
   });
 });
+
 
 
 
