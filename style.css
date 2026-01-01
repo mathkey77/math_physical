@@ -18,6 +18,7 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --bg-grad-1: radial-gradient(at 0% 0%, rgba(45, 212, 191, 0.15) 0px, transparent 50%);
   --bg-grad-2: radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.15) 0px, transparent 50%);
+   --shadow-glow: 0 0 20px rgba(45, 212, 191, 0.5); /* 민트색 글로우 효과 */
 }
 
 * { box-sizing: border-box; }
@@ -124,8 +125,21 @@ body {
 #q-progress-text { font-size: 1.2rem; font-weight: 800; color: var(--accent-strong); }
 .timer-badge { background: #f1f5f9; padding: 6px 12px; border-radius: 20px; font-weight: 700; color: var(--text-muted); }
 .progress-track { height: 10px; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
-.progress-fill { height: 100%; width: 0%; background: var(--accent-strong); transition: width 0.5s; }
-
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  
+  /* 1. 그라데이션 복구 (민트 -> 스카이블루) */
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  
+  /* 2. 둥근 모서리와 빛나는 효과 복구 */
+  border-radius: 10px;
+  box-shadow: var(--shadow-glow);
+  
+  /* 3. 통통 튀는 애니메이션 복구 (cubic-bezier) */
+  /* 시간이 0.5s -> 0.8s로 조금 더 여유롭게 움직이며, 1.56 수치 때문에 살짝 오버슈팅됐다가 돌아오는 탄성을 줍니다 */
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 .quiz-card {
   background: #ffffff; border-radius: var(--radius-xl); padding: 40px 30px;
   min-height: 160px; display: flex; align-items: center; justify-content: center;
@@ -187,3 +201,4 @@ body {
   .header h1 { font-size: 1.75rem; }
   .result-value { font-size: 2.5rem; }
 }
+
