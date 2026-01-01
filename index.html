@@ -95,42 +95,55 @@
   </div>
 </div>
 <div id="game-screen" class="screen">
-  <div class="timer-wrapper" style="display:flex; align-items:center; margin-bottom:20px;">
-    <div class="timer-container" style="flex-grow:1; background:#eee; height:15px; border-radius:10px; overflow:hidden; margin-right:10px;">
-      <div id="time-bar" style="width:0%; height:100%; background:var(--accent); transition:width 0.3s;"></div>
+  
+  <!-- 상단 HUD (헤드업 디스플레이): 진행도 및 타이머 -->
+  <div class="quiz-header">
+    <div class="progress-info">
+      <span id="q-progress-text">Q. 1 / 10</span>
+      <span id="stopwatch" class="timer-badge">00:00</span>
     </div>
-    <div id="stopwatch" style="font-weight:bold;">00:00</div>
+    
+    <div class="progress-track">
+      <div id="time-bar" class="progress-fill"></div>
+    </div>
   </div>
 
-  <div class="quiz-container">
-    <div id="q-number" style="font-weight:bold; color:var(--accent); margin-bottom:10px;">Q. 1 / 10</div>
-    <div id="q-text" class="q-text-box" style="font-size:1.2rem; margin-bottom:20px; min-height:80px;">문제를 불러오고 있습니다...</div>
-    <div id="choices" class="choices-grid">
-      </div>
+  <!-- 문제 영역 카드 -->
+  <div class="quiz-card">
+    <div id="q-text" class="question-text">문제를 불러오고 있습니다...</div>
+  </div>
+
+  <!-- 보기 영역 (그리드 레이아웃) -->
+  <div id="choices" class="choices-grid">
+    <!-- 자바스크립트가 버튼을 생성해 넣는 곳 -->
+  </div>
+
   </div>
 </div>
 
   <div id="result-screen" class="screen">
-    <div class="result-inner">
-      <h2>피지컬 측정 완료</h2>
+<div class="result-inner">
+  <h2>피지컬 측정 완료!</h2>
+  
+  <!-- 점수 카드 -->
+  <div class="result-card">
+    <div class="result-label">SCORE</div>
+    <div id="result-score" class="result-value">0 / 0</div>
+  </div>
 
-      <p class="result-line">
-        <span id="result-meta" style="color:#9ca3af;"></span>
-      </p>
+  <!-- 시간 카드 -->
+  <div class="result-card" style="padding: 20px; margin-top: 15px; transform: scale(0.95);">
+    <div class="result-label" style="font-size: 0.8rem;">TIME</div>
+    <div id="result-time" class="result-value" style="font-size: 2rem;">0.00초</div>
+  </div>
 
-      <div class="section-card" style="margin-top:12px;">
-        <p class="result-line" style="margin:0;">
-          점수: <span id="result-score"></span>
-        </p>
-        <p class="result-line" style="margin:6px 0 0;">
-          소요 시간: <span id="result-time"></span>
-        </p>
-      </div>
+  <br>
+  <!-- 기존 버튼들 유지 -->
+  <button id="save-score-btn" class="nes-btn is-primary">랭킹 저장하기</button>
+  <button id="view-ranking-btn" class="nes-btn">랭킹 보기</button>
+  <button id="back-to-menu-from-result" class="nes-btn" onclick="switchScreen('menu-screen')">처음으로</button>
+</div>
 
-      <button class="nes-btn is-primary" id="save-score-btn">랭킹 저장하기</button>
-      <button class="nes-btn" id="view-ranking-btn" style="margin-top:10px;">랭킹 보기</button>
-      <button class="nes-btn" id="back-home-btn" style="margin-top:14px;">처음으로</button>
-    </div>
   </div>
 
   <div id="ranking-screen" class="screen">
@@ -179,6 +192,7 @@
 
 </body>
 </html>
+
 
 
 
