@@ -42,7 +42,7 @@ function bindClick(id, fn) {
 function smartFormatMath(text) {
   if (!text) return "";
   return text.replace(/\$\$(.*?)\$\$/g, (match, content) => {
-    if (content.trim().length < 25) { 
+    if (content.trim().length < 35) { 
       return `$${content.trim()}$`;
     }
     return match;
@@ -387,4 +387,5 @@ window.addEventListener('load', () => {
   bindClick('back-result-btn', () => switchScreen('result-screen'));
   bindClick('back-home-btn-2', () => switchScreen('menu-screen'));
 });
+
 
