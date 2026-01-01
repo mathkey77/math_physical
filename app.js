@@ -23,9 +23,12 @@ let gameState = {
 
 // ====== 유틸 ======
 function switchScreen(id) {
+  // 모든 화면 숨김
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  // 타겟 화면 표시
   const target = document.getElementById(id);
   if (target) target.classList.add('active');
+  // 스크롤 상단 이동
   window.scrollTo(0, 0);
 }
 
@@ -54,10 +57,8 @@ async function initCourseTopicSelect() {
 
     let data;
     if (cached && cachedTime && now - cachedTime < CACHE_DURATION) {
-      console.log("✅ 로컬 캐시 사용");
       data = JSON.parse(cached);
     } else {
-      console.log("📡 서버 요청");
       const res = await fetch(`${GAS_BASE_URL}?action=getCoursesAndTopics`);
       const json = await res.json();
       if (!json.ok) throw new Error("서버 응답 오류");
@@ -111,7 +112,6 @@ async function onClickStartBtn() {
   if (!name) return alert("이름을 입력해주세요.");
   if (!course || !topic) return alert("과정과 주제를 선택해주세요.");
 
-  // ✅ [수정] 여기서 문제 수를 미리 저장합니다!
   const qRadio = document.querySelector('input[name="q-count"]:checked');
   currentQCount = qRadio ? Number(qRadio.value) : 10;
 
@@ -129,15 +129,13 @@ async function onClickStartBtn() {
   try {
     const res = await fetch(`${GAS_BASE_URL}?action=getDescription&topic=${encodeURIComponent(currentSheetName)}`);
     const json = await res.json();
-    
-    // ✅ [수정] 텍스트 넣고나서 수식 렌더링 실행
     contentEl.innerHTML = json.ok && json.data ? json.data : "설명이 없습니다.";
     renderMath(contentEl); 
   } catch {
     contentEl.innerText = "설명 로드 실패";
   }
 }
-// ====== 개념 → 퀴즈 ======
+
 async function onStartQuizFromArticle() {
   if (!currentSheetName) {
     alert("주제 정보가 유실되었습니다.");
@@ -147,19 +145,12 @@ async function onStartQuizFromArticle() {
   await startQuiz();
 }
 
-// ====== 퀴즈 시작 (수정됨) ======
+// ====== 퀴즈 시작 ======
 async function startQuiz() {
-  if (!currentSheetName) {
-    alert("주제 정보가 유실되었습니다.\n처음 화면으로 돌아갑니다.");
-    switchScreen('menu-screen');
-    return;
-  }
-  
-  // (여기 있던 라디오 버튼 읽는 코드 삭제됨 - 위에서 이미 저장함)
-
   switchScreen('game-screen');
   const qTextEl = document.getElementById('q-text');
   qTextEl.innerText = "문제를 불러오는 중...";
+  document.getElementById('choices').innerHTML = ""; // 초기화
 
   try {
     const url = `${GAS_BASE_URL}?action=getGameData&topic=${encodeURIComponent(currentSheetName)}&count=${currentQCount}`;
@@ -185,7 +176,6 @@ async function startQuiz() {
   }
 }
 
-
 // ====== 타이머 ======
 function startTimer() {
   clearInterval(gameState.timerInterval);
@@ -200,7 +190,7 @@ function startTimer() {
   }, 1000);
 }
 
-// ====== 문제 렌더 (수정됨) ======
+// ====== 문제 렌더링 ======
 function renderQuestion() {
   const q = gameState.questions[gameState.currentIdx];
   if (!q) return;
@@ -208,38 +198,36 @@ function renderQuestion() {
   const progress = ((gameState.currentIdx + 1) / gameState.totalQ) * 100;
   document.getElementById('time-bar').style.width = progress + "%";
 
-    const progressText = document.getElementById('q-progress-text');
+  const progressText = document.getElementById('q-progress-text');
   if (progressText) {
     progressText.innerText = `Q. ${gameState.currentIdx + 1} / ${gameState.totalQ}`;
   }
   
   const qTextEl = document.getElementById('q-text');
   qTextEl.innerHTML = q.text; 
-  renderMath(qTextEl); // ✅ 문제 텍스트 수식 렌더링
+  renderMath(qTextEl);
 
   const wrap = document.getElementById('choices');
   wrap.innerHTML = "";
 
   q.choices.forEach(c => {
     const btn = document.createElement('button');
-    btn.innerHTML = c; // ✅ 버튼 내부 텍스트 HTML로 처리
+    btn.innerHTML = c; 
     btn.onclick = () => checkAnswer(c);
     wrap.appendChild(btn);
   });
-  
-  renderMath(wrap); // ✅ 보기 버튼들도 일괄 수식 렌더링
+  renderMath(wrap); 
 }
 
-// ====== 정답 체크 ======
 function checkAnswer(choice) {
   const q = gameState.questions[gameState.currentIdx];
-  if (choice === q.answer) gameState.score++;  // ✅ q.answer 사용
+  if (choice === q.answer) gameState.score++;
   gameState.currentIdx++;
   if (gameState.currentIdx < gameState.totalQ) renderQuestion();
   else endGame();
 }
 
-// ====== 종료 ======
+// ====== 종료 및 결과 ======
 function endGame() {
   clearInterval(gameState.timerInterval);
   gameState.endTime = Date.now();
@@ -251,45 +239,117 @@ function endGame() {
   switchScreen('result-screen');
 }
 
-// ====== 랭킹 ======
+// ====== 랭킹 보기 ======
 async function showRanking() {
   switchScreen('ranking-screen');
   const wrap = document.getElementById('ranking-table-wrap');
-  wrap.innerText = "로딩 중...";
+  wrap.innerHTML = "<div style='text-align:center; padding:20px;'>랭킹을 불러오는 중...</div>";
 
   try {
     const res = await fetch(`${GAS_BASE_URL}?action=getRankings&topic=${encodeURIComponent(currentSheetName)}`);
     const json = await res.json();
-    wrap.innerText = JSON.stringify(json.data, null, 2);
+    
+    // ✅ JSON 그대로 뿌리지 않고 테이블 렌더링 함수 호출
+    renderRankingTable(json.data, wrap);
+    
+    document.getElementById('ranking-meta').innerText = `${currentCourse} > ${currentTopic}`;
+
   } catch {
-    wrap.innerText = "랭킹 로드 실패";
+    wrap.innerHTML = "<div style='text-align:center; color:red;'>랭킹 로드 실패</div>";
   }
 }
 
-// 3. 이벤트 바인딩 추가 (window.addEventListener 내부)
+// ✅ [추가] 랭킹 테이블 렌더링 함수
+function renderRankingTable(data, container) {
+  if (!data || data.length === 0) {
+    container.innerHTML = "<div style='text-align:center; padding:20px;'>아직 등록된 랭킹이 없습니다.</div>";
+    return;
+  }
+
+  let html = `
+    <table class="ranking-table">
+      <thead>
+        <tr>
+          <th width="15%">#</th>
+          <th>이름</th>
+          <th width="20%">점수</th>
+          <th width="25%">시간</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  // 최대 10등까지만 보여주거나, 스크롤
+  data.forEach((row, idx) => {
+    const rank = idx + 1;
+    let badgeClass = '';
+    if (rank === 1) badgeClass = 'rank-1';
+    else if (rank === 2) badgeClass = 'rank-2';
+    else if (rank === 3) badgeClass = 'rank-3';
+
+    html += `
+      <tr>
+        <td><span class="rank-badge ${badgeClass}">${rank}</span></td>
+        <td>${row.name || '익명'}</td>
+        <td style="color:var(--accent-strong); font-weight:bold;">${row.score}</td>
+        <td style="color:#64748b; font-size:0.9em;">${row.time}s</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+// ====== 이벤트 바인딩 ======
 window.addEventListener('load', () => {
   initCourseTopicSelect();
-  bindClick('start-btn', onClickStartBtn);
-  bindClick('go-to-quiz-btn', onStartQuizFromArticle);
-  bindClick('view-ranking-btn', showRanking);
 
-  // ✅ 누락된 버튼들
-  bindClick('back-to-menu-from-article', () => switchScreen('menu-screen'));
-  bindClick('back-to-result-btn', () => switchScreen('result-screen'));
+  // 메인
+  bindClick('start-btn', onClickStartBtn);
+  
+  // 아티클 화면
+  bindClick('go-to-quiz-btn', onStartQuizFromArticle);
+  
+  // 결과 화면
+  bindClick('view-ranking-btn', showRanking);
+  bindClick('back-to-menu-from-result', () => switchScreen('menu-screen')); // 결과 -> 처음
+  
+  // 랭킹 화면 (✅ ID 불일치 해결)
+  bindClick('back-result-btn', () => switchScreen('result-screen')); // 랭킹 -> 결과
+  bindClick('back-home-btn-2', () => switchScreen('menu-screen'));   // 랭킹 -> 처음
+
+  // 점수 저장
   bindClick('save-score-btn', async () => {
     const name = getStudentName();
     const duration = ((gameState.endTime - gameState.startTime) / 1000).toFixed(2);
+    
+    // 버튼 비활성화 (중복 클릭 방지)
+    const btn = document.getElementById('save-score-btn');
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "저장 중...";
+
     try {
       const url = `${GAS_BASE_URL}?action=saveScore&name=${encodeURIComponent(name)}&topic=${encodeURIComponent(currentSheetName)}&totalQ=${gameState.totalQ}&score=${gameState.score}&timeSec=${duration}`;
       const res = await fetch(url);
       const json = await res.json();
-      if (json.ok) alert("랭킹에 저장되었습니다!");
-      else alert("저장 실패: " + json.error);
+      
+      if (json.ok) {
+        alert("랭킹에 저장되었습니다!");
+        showRanking(); // 저장 후 바로 랭킹 보여주기
+      } else {
+        alert("저장 실패: " + json.error);
+      }
     } catch (e) {
       alert("저장 중 오류 발생");
+    } finally {
+      btn.disabled = false;
+      btn.innerText = originalText;
     }
   });
 });
+
 function renderMath(element) {
   if (window.renderMathInElement) {
     renderMathInElement(element, {
@@ -302,7 +362,3 @@ function renderMath(element) {
     });
   }
 }
-
-
-
-
