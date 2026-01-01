@@ -439,7 +439,7 @@ function renderRankingTable(data, container) {
       </tr>
     `;
   });
-
+});
   html += `</tbody></table>`;
   container.innerHTML = html;
 }
@@ -456,5 +456,6 @@ function renderMath(element) {
     });
   }
 }
+
 
 
