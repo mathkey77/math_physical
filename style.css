@@ -168,56 +168,59 @@ body {
 /* =========================
    Ranking Table (New)
    ========================= */
-.ranking-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }
-/* [수정] 랭킹 테이블 헤더 및 셀 중앙 정렬 */
+/* 랭킹 테이블 전체 정렬 */
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
 .ranking-table th {
-  text-align: center; /* 왼쪽 정렬에서 가운데 정렬로 변경 */
-  color: var(--text-muted);
-  font-weight: 600;
-  padding: 12px 8px;
-  border-bottom: 2px solid #e2e8f0;
+  text-align: center; /* 헤더 중앙 정렬 */
+  padding: 12px 5px;
+  font-size: 0.9rem;
+  color: #94a3b8;
+  border-bottom: 2px solid #f1f5f9;
 }
 
 .ranking-table td {
-  text-align: center; /* 셀 내부 데이터도 가운데 정렬 */
-  padding: 16px 8px;
-  border-bottom: 1px solid #f1f5f9;
-  color: var(--text-main);
-  font-weight: 500;
+  text-align: center; /* 데이터 중앙 정렬 */
+  padding: 14px 5px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f8fafc;
 }
 
-/* [수정] 메달 아이콘을 왕관/배지 느낌으로 변경 */
+/* 왕관 배지 스타일 */
 .rank-badge {
-  display: inline-block;
-  width: 26px;
-  height: 26px;
-  line-height: 26px;
-  /* border-radius를 50%에서 조금 각진 형태로 바꾸면 배지 느낌이 납니다 */
-  border-radius: 6px; 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px; /* 각진 사각형 */
   background: #f1f5f9;
   color: #64748b;
-  text-align: center;
-  font-size: 0.8rem;
   font-weight: 800;
-  position: relative;
+  font-size: 0.8rem;
+  transition: all 0.2s;
 }
 
-/* 1등 왕관 느낌 (황금색) */
+/* 1등: 황금 왕관 배지 */
 .rank-1 {
-  background: #fbbf24;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
   color: white;
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+  font-size: 1rem; /* 이모지 크기 */
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
 }
 
-/* 2등 (은색) */
+/* 2등: 실버 배지 */
 .rank-2 {
-  background: #94a3b8;
+  background: linear-gradient(135deg, #cbd5e1, #94a3b8);
   color: white;
 }
 
-/* 3등 (동색) */
+/* 3등: 브론즈 배지 */
 .rank-3 {
-  background: #b45309;
+  background: linear-gradient(135deg, #d97706, #b45309);
   color: white;
 }
 
@@ -242,5 +245,6 @@ body {
   .header h1 { font-size: 1.75rem; }
   .result-value { font-size: 2.5rem; }
 }
+
 
 
