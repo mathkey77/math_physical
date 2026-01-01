@@ -208,6 +208,11 @@ function renderQuestion() {
   const progress = ((gameState.currentIdx + 1) / gameState.totalQ) * 100;
   document.getElementById('time-bar').style.width = progress + "%";
 
+    const progressText = document.getElementById('q-progress-text');
+  if (progressText) {
+    progressText.innerText = `Q. ${gameState.currentIdx + 1} / ${gameState.totalQ}`;
+  }
+  
   const qTextEl = document.getElementById('q-text');
   qTextEl.innerHTML = q.text; 
   renderMath(qTextEl); // ✅ 문제 텍스트 수식 렌더링
@@ -297,6 +302,7 @@ function renderMath(element) {
     });
   }
 }
+
 
 
 
