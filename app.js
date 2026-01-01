@@ -277,53 +277,51 @@ async function showRanking() {
   }
 }
 
-// ✅ [수정] 랭킹 테이블 렌더링 함수 (정렬 로직 추가됨)
+// ✅ [수정] 랭킹 테이블 렌더링 함수
 function renderRankingTable(data, container) {
   if (!data || data.length === 0) {
     container.innerHTML = "<div style='text-align:center; padding:20px;'>아직 등록된 랭킹이 없습니다.</div>";
     return;
   }
 
-  // ✅ [중요] 클라이언트 측 정렬 로직
-  // 1순위: 점수 내림차순 (높은게 위로)
-  // 2순위: 시간 오름차순 (짧은게 위로)
+  // 1순위: 점수 내림차순 -> 2순위: 시간 오름차순
   data.sort((a, b) => {
     const scoreA = Number(a.score);
     const scoreB = Number(b.score);
     const timeA = parseFloat(a.time);
     const timeB = parseFloat(b.time);
 
-    if (scoreA !== scoreB) {
-      return scoreB - scoreA; // 점수 높은 순
-    } else {
-      return timeA - timeB; // 점수 같으면 시간 빠른 순
-    }
+    if (scoreA !== scoreB) return scoreB - scoreA;
+    return timeA - timeB;
   });
 
+  // ✅ 헤더 텍스트 변경: # -> 순위
   let html = `
-    <table class="ranking-table">
+    <table class="ranking-table" style="width:100%;">
       <thead>
         <tr>
-          <th width="15%">#</th>
-          <th>이름</th>
-          <th width="20%">점수</th>
+          <th width="20%">순위</th>
+          <th width="30%">이름</th>
+          <th width="25%">점수</th>
           <th width="25%">시간</th>
         </tr>
       </thead>
       <tbody>
   `;
 
-  // 최대 10등까지만 자르거나 전체 표시 (여기선 전체 표시 후 스크롤)
   data.forEach((row, idx) => {
     const rank = idx + 1;
     let badgeClass = '';
+    let rankDisplay = rank;
+
+    // 1, 2, 3등일 때 스타일 적용
     if (rank === 1) badgeClass = 'rank-1';
     else if (rank === 2) badgeClass = 'rank-2';
     else if (rank === 3) badgeClass = 'rank-3';
 
     html += `
       <tr>
-        <td><span class="rank-badge ${badgeClass}">${rank}</span></td>
+        <td><span class="rank-badge ${badgeClass}">${rankDisplay}</span></td>
         <td>${row.name || '익명'}</td>
         <td style="color:var(--accent-strong); font-weight:bold;">${row.score}</td>
         <td style="color:#64748b; font-size:0.9em;">${row.time}s</td>
@@ -386,3 +384,4 @@ function renderMath(element) {
     });
   }
 }
+
