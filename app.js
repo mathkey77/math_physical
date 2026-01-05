@@ -395,5 +395,54 @@ window.addEventListener('load', () => {
   bindClick('back-home-btn-2', () => switchScreen('menu-screen'));
 });
 
+// ====== 푸터 버튼 전용 로직 ======
+window.addEventListener('load', () => {
+  // 서비스 소개
+  const btnService = document.getElementById('btn-service-info');
+  if (btnService) {
+    btnService.onclick = () => {
+      const content = `
+        <h3 style="color:var(--accent-strong); margin-bottom:15px;">Math Physical에 오신 것을 환영합니다!</h3>
+        <p>저희 서비스는 단순한 문제 풀이 사이트가 아닙니다. 초등 기초부터 고등 심화까지 <strong>'수학적 연산 근육'</strong>을 키우기 위해 설계된 트레이닝 플랫폼입니다.</p>
+        <p>1타 강사들의 학습 노하우를 녹여낸 커리큘럼을 통해 개념을 익히고, 실시간 타이머와 랭킹 시스템으로 여러분의 피지컬을 증명해 보세요.</p>
+      `;
+      showInfoPopup('서비스 소개', content);
+    };
+  }
+
+  // 개인정보처리방침
+  const btnPrivacy = document.getElementById('btn-privacy');
+  if (btnPrivacy) {
+    btnPrivacy.onclick = () => {
+      const content = `
+        <p>본 사이트는 사용자의 닉네임과 게임 데이터(점수, 시간)를 랭킹 서비스 제공 목적으로만 수집합니다.</p>
+        <p>1. 수집 항목: 닉네임, 게임 기록<br>2. 수집 목적: 명예의 전당 등재 및 서비스 운영<br>3. 제3자 제공: 본 사이트는 광고 수익을 위해 Google AdSense를 활용하며, 맞춤형 광고 제공을 위해 쿠키가 사용될 수 있습니다.</p>
+      `;
+      showInfoPopup('개인정보처리방침', content);
+    };
+  }
+
+  // 문의하기
+  const btnContact = document.getElementById('btn-contact');
+  if (btnContact) {
+    btnContact.onclick = () => {
+      showInfoPopup('문의하기', '<p>오류 제보 및 제휴 문의는 아래 메일로 연락 부탁드립니다.</p><p><strong>Email: support@mathphysical.com</strong></p>');
+    };
+  }
+});
+
+// 정보를 띄워주는 공통 함수
+function showInfoPopup(title, html) {
+  const infoScreen = document.getElementById('info-screen');
+  const infoTitle = document.getElementById('info-title');
+  const infoContent = document.getElementById('info-content');
+
+  if (infoScreen && infoTitle && infoContent) {
+    infoTitle.innerText = title;
+    infoContent.innerHTML = html;
+    // 기존에 만드신 switchScreen 함수를 사용합니다.
+    if (typeof switchScreen === 'function') switchScreen('info-screen');
+  }
+}
 
 
